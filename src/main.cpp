@@ -1,26 +1,29 @@
-#include "Sparse_Matrix.hpp"
-#include <iostream>
+#include "SparseMatrix.hpp"
+
 
 
 int main()
 {   
-    //using SparseMatrix = algebra::Sparse_Matrix;
-    //using RowMajor = algebra::StorageOrder::RowMajor;
-    //using ColumnMajor = algebra::StorageOrder::ColumnMajor;
-
     // TEST 1: Create Sparse Matrix using uncompressed and compressed storage technique and perform the conversion from one form to the others and vice-versa
-    algebra::Sparse_Matrix<double, algebra::StorageOrder::RowMajor> mat;
-    mat.resize(3, 3);
-    mat.compress();
-    mat(0, 0) = 1.0;
-    mat(1, 1) = 2.0;
-    mat(2, 2) = 3.0;
-    
- 
+    algebra::SparseMatrix<double, StorageOrder::RowMajor> mat;
+    mat.resize(4, 4);
+    mat.uncompress();               // I'm only using uncompressed state!!!!!!!!!!
+    mat(0, 0) = 1.3;
+    mat(1, 1) = 2.3;
+    mat(3, 2) = 4.3;
+    mat.print();
+    std::cout << "Element at (2, 2) in uncompressed matrix: " << mat(2-1,2-1) << std::endl;
+
+
     // TEST 2: Implementation of the Matrix reader format
- //   matrixFileName = ifl("matrixFileName", "../../MatrixData/spd/Insp_131.mtx");
- //   std::string matrixFile(matrixFileName);
- //   SparseMatrix<double, RowMajor> mat1(matrixFile);
+    std::string filename_matrix="Matrix.mtx";
+    algebra::SparseMatrix<double,StorageOrder::ColumnMajor> mat1(filename_matrix);
+    mat1.print();
+/*
+    //TEST 3: Matrix-vector multiplication
+    std::string filename="Insp_131.mtx";
+    algebra::SparseMatrix<double,StorageOrder::ColumnMajor> mat2(filename);
+   */ 
 
     return 0;
 }

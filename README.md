@@ -2,9 +2,6 @@
 
 This is a C++ library for working with sparse matrices. Sparse matrices are matrices that have a large number of zero elements. This library provides a way to efficiently store and manipulate sparse matrices in memory.
 
-## Features
-
-
 
 ## Usage
 
@@ -20,7 +17,9 @@ git clone git@github.com:samueledelia/PACS-Challenge2.git
 ```cpp
 #include "Sparse_Matrix.hpp"
 ```
-3. Use the algebra::Sparse_Matrix class to work with sparse matrices!!
+3. Run the provided tests to see examples of library usage and to verify code integrity and to measure its performance.
+
+4. Use the algebra::Sparse_Matrix class to work with sparse matrices!!
 
 ## Things to do:
 - Implementation of sparse matrices using different storage formats
@@ -28,23 +27,5 @@ git clone git@github.com:samueledelia/PACS-Challenge2.git
 - Matrix-vector multiplication
 - Header-only implementation for easy integration into existing projects
 - Everyone should be able to run the Makefile!
-- Try to learn to use Doxygen to comment on your function/classes/methods. There are plenty of examples in the Examples code.
-- Printout in low-level functions Normally you do not want cout<< in low-level functions. Printout is made in the main or in specialized functions called at a high level in the code. This is for efficiency since printouts are computationally expensive. Sometimes, you may want to have a verbose option for debugging or testing. This is a case where using CPP macros is fine.  
-
-#ifndef NDEBUG
-
-... print
-
-#endif
-
-or
-
-#ifdef VERBOSE
-
-print
-
-#endif  
-
-Another technique is the callback technique, an example is in the NewtonSolver Example
-
-If it is an error message, use std::cerr not std::cout.
+- Try to learn to use Doxygen to comment on your function/classes/methods.
+- Add Chrono.hpp to time the speed!
