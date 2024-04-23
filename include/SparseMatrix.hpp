@@ -2,6 +2,7 @@
 #define SPARSEMATRIX_HPP
 
 #include <iostream>
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <map>
@@ -18,7 +19,7 @@ enum class StorageOrder {
 
 // definition of the comparator for the map of the Matrix class, so that it will be ordered differently based on the StorageOrder this is the default one
 template <StorageOrder S>
-struct MyTypeComparator {
+struct MyComparator {
     bool operator()(const std::array<std::size_t,2>& lhs, const std::array<std::size_t,2>& rhs) const {
             // if the row is equal, the ordering is based on the column, otherwise it is based on the row
             if(lhs[0]==rhs[0])
@@ -30,7 +31,7 @@ struct MyTypeComparator {
 // this is the specialization for the column type matrix, since there are only two possible cases, it chooses the default if it is Row-wise, while it chooses 
 // the following if it is column-wise
 template <>
-struct MyTypeComparator<StorageOrder::ColumnMajor>{
+struct MyComparator<StorageOrder::ColumnMajor>{
     bool operator()(const std::array<std::size_t,2>& lhs, const std::array<std::size_t,2>& rhs) const {
             // if the column is equal, the ordering is based on the row, otherwise it is based on the column
             if(lhs[1]==rhs[1])
@@ -47,26 +48,24 @@ namespace algebra // Algebra namespace
     private:
         // Type definitions
         using IndexArray = std::array<std::size_t, 2>;
-        using MapType = std::map<IndexArray, T,MyTypeComparator<Order>>;            // map (i,j) --> A_{i,j}
+        using MapType = std::map<IndexArray, T,MyComparator<Order>>;            // map (i,j) --> A_{i,j}
         
         bool compressed;
-
         // Data members for the Coordinate map (UNCOMPRESSED TECHNIQUE)
         MapType data;
         std::size_t num_rows;
         std::size_t num_cols;
         
-
         // vectors for the Compressed Sparse Row/Column (COMPRESSED TECHNIQUE)
         std::vector<std::size_t> first_indexes;
         std::vector<std::size_t> second_indexes;
         std::vector<T> values;
-
     public:
         // Constructors
         SparseMatrix() : num_rows(0), num_cols(0), compressed(false) {}                                        // Default Constructor  
         SparseMatrix(std::size_t rows,std::size_t cols): num_rows(rows), num_cols(cols), compressed(false) {}; // Constructors that takes the number of rows, columes and compressed boolean
-        SparseMatrix(std::string filename);                                                                    // Constructor that takes the filename of the Matrix Market format file
+        SparseMatrix(std::size_t rows,std::size_t cols, bool compressed_): num_rows(rows), num_cols(cols), compressed(compressed_) {};
+        SparseMatrix(std::string filename, bool compressed_);                                                  // Constructor that takes the filename of the Matrix Market format file
         
         // Read mtx file
         void read_mtx(std::string filename);
@@ -75,24 +74,13 @@ namespace algebra // Algebra namespace
         void print();
 
         // Method to resize the Sparse Matrix
-        void resize(std::size_t rows, std::size_t cols) {
-            num_rows = rows;
-            num_cols = cols;
-            data.clear();
-            // Optionally, resize operations could be implemented here
-        }
+        void resize(std::size_t rows, std::size_t cols);
 
         // Method to compress the Sparse Matrix
-        void compress() {
-            // ?
-            compressed = true;
-        }
+        void compress();
 
         // Method to uncompress the matrix
-        void uncompress() {
-            // ?
-            compressed = false;
-        }
+        void uncompress();
 
         // Method to check if the Sparse Matrix is compressed
         bool is_compressed() const {
@@ -100,41 +88,10 @@ namespace algebra // Algebra namespace
         }
 
         // Const call operator to access elements
-        T operator()(std::size_t i, std::size_t j) const {
-            if (i >= get_rows() || j >= get_cols())
-                return 0; // Out of bounds, return 0
-            if (!compressed)
-                return data.count({i, j}) ? data.at({i, j}) : 0;
-            else {
-                // Compressed mode
-                if constexpr(Order == StorageOrder::RowMajor) {
-                    // Search for the element in the compressed row-major format
-                    for (std::size_t k = first_indexes[i]; k < first_indexes[i + 1]; ++k) {
-                        if (second_indexes[k] == j) {
-                            return values[k]; // Element found, return its value
-                            }
-                        }
-                    return 0; // Element not found, return default value
-                } else {
-                // Search for the element in the compressed column-major format
-                    for (std::size_t k = first_indexes[j]; k < first_indexes[j + 1]; ++k) {
-                        if (second_indexes[k] == i) {
-                            return values[k]; // Element found, return its value
-                        }
-                    }
-            return 0; // Element not found, return default value
-        }
-            }
-        }
+        T operator()(std::size_t i, std::size_t j) const;
 
         // Non-const call operator for adding elements
-        T& operator()(std::size_t i, std::size_t j) {
-            if (i >= get_rows() || j >= get_cols())
-                throw std::out_of_range("Index out of range");
-            if (compressed)
-                throw std::logic_error("Cannot add elements in compressed mode");
-            return data[{i, j}];
-        }
+        T& operator()(std::size_t i, std::size_t j);
 
         // Method to get the number of rows
         std::size_t get_rows() const {
@@ -167,7 +124,8 @@ namespace algebra // Algebra namespace
 
 // The following are method of Sparse Matrix Class to be put into the source file (.cpp)
 template<typename T, StorageOrder Order>
-algebra::SparseMatrix<T, Order>::SparseMatrix(std::string filename) {
+algebra::SparseMatrix<T, Order>::SparseMatrix(std::string filename, bool compressed_) {
+    compressed = compressed_;
     // Open the file
     std::ifstream file(filename);
     // Check if the file is opened successfully
@@ -178,28 +136,51 @@ algebra::SparseMatrix<T, Order>::SparseMatrix(std::string filename) {
 
     // Read the first line of the file to get matrix dimensions
     std::string line;
-    std::size_t numRows, numCols, numNonZeros;
+    // M = num of rows, N = num of cols, L = num of non zero element in the matrix
+    std::size_t M, N, L;
     while (getline(file, line) && line[0] == '%');
     std::stringstream ss(line);
-    if (!(ss >> numRows >> numCols >> numNonZeros)) {
+    if (!(ss >> M >> N >> L)) {
         std::cerr << "Invalid matrix market file format" << std::endl;
         file.close();
         return;
     }
-    num_rows = numRows;
-    num_cols = numCols;
+    num_rows = M;
+    num_cols = N;
 
-    // Read matrix data
-    std::size_t row, col;
-    T value;
-    while (file >> row >> col >> value) {
-        // Adjust indices to 0-based indexing and store data in map
-        data[{row - 1, col - 1}] = value;
+    if (!compressed){
+        // Assemble COOmap matrix
+        std::size_t row, col;
+        T value;
+        while (file >> row >> col >> value) {
+            // Adjust indices to 0-based indexing and store data in map
+            data[{row - 1, col - 1}] = value;
+        }
+    }else{
+        if constexpr (Order == StorageOrder::ColumnMajor)
+            std::cerr << "This option is not implemented!" << std::endl;
+        
+        int last_row = 1;
+	    first_indexes.push_back(1);
+	    for (int l = 0; l < L; l++){
+	    	int row, col;
+	    	T value;
+	    	file >> row >> col >> value;
+	    	second_indexes.push_back(col);
+	    	values.push_back(value);
+	    	if (row > last_row){
+	    		last_row = row;
+	    		first_indexes.push_back(second_indexes.size());
+	    	}	
+	}
+	first_indexes.push_back(second_indexes.size() + 1);
     }
+    
     // Close the file
     file.close();
     std::cout << "Matrix read successfully from file: " << filename << std::endl;
 }
+
 
 template<typename T, StorageOrder Order>
 void algebra::SparseMatrix<T, Order>::read_mtx(std::string filename) {
@@ -222,16 +203,17 @@ void algebra::SparseMatrix<T, Order>::read_mtx(std::string filename) {
 
     // Read the first line of the file to get matrix dimensions
     std::string line;
-    std::size_t numRows, numCols, numNonZeros;
+    // M = num of rows, N = num of cols, L = num of non zero element in the matrix
+    std::size_t M, N, L;
     while (getline(file, line) && line[0] == '%');
     std::stringstream ss(line);
-    if (!(ss >> numRows >> numCols >> numNonZeros)) {
+    if (!(ss >> M >> N >> L)) {
         std::cerr << "Invalid matrix market file format" << std::endl;
         file.close();
         return;
     }
-    num_rows = numRows;
-    num_cols = numCols;
+    num_rows = M;
+    num_cols = N;
 
     // Read matrix data
     std::size_t row, col;
@@ -279,6 +261,130 @@ void algebra::SparseMatrix<T, Order>::print() {
                 }
             }
         }
+    }
+}
+
+template<typename T, StorageOrder Order>
+void algebra::SparseMatrix<T, Order>::resize(std::size_t rows, std::size_t cols){
+    // We cannot resize if the matrix is compressed
+    if(is_compressed())
+        std::cerr<<"Error: We cannot resize if the matrix is compressed!"<<std::endl;
+            
+    // New data!!!
+    std::map<std::array<std::size_t,2>,T,MyComparator<Order>> new_data;
+            
+    if constexpr(Order==StorageOrder::RowMajor){            // ROWMAJOR
+        for(auto it=data.begin();it!=data.end();it++){
+            std::size_t new_row=static_cast<std::size_t>((it->first[0]*num_cols + it->first[1])/cols);
+            std::size_t new_col=static_cast<std::size_t>((it->first[0]*num_cols + it->first[1])%cols);
+            // definition of the key for the map
+            std::array<std::size_t,2> pos={new_row,new_col};
+            // assignment of the value in the new map
+            new_data[pos]=it->second;
+            }
+        }
+        else{                                               // COLUMN MAJOR
+            for(auto it=data.begin();it!=data.end();it++){
+                std::size_t new_col=static_cast<std::size_t>((it->first[0] + it->first[1]*num_rows)/rows);
+                std::size_t new_row=static_cast<std::size_t>((it->first[0] + it->first[1]*num_rows)%rows);
+                // definition of the key for the map
+                std::array<std::size_t,2> pos={new_row,new_col};
+                // assignment of the value in the new map
+                new_data[pos]=it->second;
+                }        
+        }
+        // Re-adjust parameters
+        data.clear();
+        data=new_data;
+        num_rows=rows;
+        num_cols=cols;
+        return;
+}
+
+
+template<typename T, StorageOrder Order>
+void algebra::SparseMatrix<T,Order>::compress(){
+    if(is_compressed()){
+        compressed = true;
+        return;
+    }
+
+
+    if constexpr(Order==StorageOrder::RowMajor){
+        return;
+    }
+
+}
+
+template<typename T, StorageOrder Order>
+void algebra::SparseMatrix<T,Order>::uncompress(){
+    // ?
+    compressed = false;
+}
+
+
+template<typename T, StorageOrder Order>
+T algebra::SparseMatrix<T,Order>::operator()(std::size_t i, std::size_t j) const {
+    if (i >= get_rows() || j >= get_cols())
+        return 0; // Out of bounds, return 0
+    if (!compressed)
+        return data.count({i, j}) ? data.at({i, j}) : 0;
+    else {
+        // Compressed mode
+        if constexpr(Order == StorageOrder::RowMajor) {
+            // Search for the element in the compressed row-major format
+            for (std::size_t k = first_indexes[i]; k < first_indexes[i + 1]; ++k) {
+                if (second_indexes[k] == j) {
+                    return values[k]; // Element found, return its value
+                    }
+                }
+            return 0; // Element not found, return default value
+        } else {
+        // Search for the element in the compressed column-major format
+            for (std::size_t k = first_indexes[j]; k < first_indexes[j + 1]; ++k) {
+                if (second_indexes[k] == i) {
+            return values[k]; // Element found, return its value
+                }
+            }
+        return 0; // Element not found, return default value
+        }
+    }
+}
+
+
+template<typename T, StorageOrder Order>
+T& algebra::SparseMatrix<T,Order>::operator()(std::size_t i, std::size_t j) {
+    if (i >= get_rows() || j >= get_cols())
+        throw std::out_of_range("Index out of range");
+
+    if (compressed) {
+        // Compressed mode
+        if constexpr(Order == StorageOrder::RowMajor) {
+            auto row_begin = first_indexes[i];
+            auto row_end = first_indexes[i + 1];
+            auto it = std::find_if(&second_indexes[row_begin], &second_indexes[row_end], [j](std::size_t k) {
+                return k == j;
+            });
+            if (it != &second_indexes[row_end]) {
+                std::size_t k = std::distance(&second_indexes[row_begin], it) + row_begin;
+                return values[k];
+            }
+        } else {
+            auto col_begin = first_indexes[j];
+            auto col_end = first_indexes[j + 1];
+            auto it = std::find_if(&second_indexes[col_begin], &second_indexes[col_end], [i](std::size_t k) {
+                return k == i;
+            });
+            if (it != &second_indexes[col_end]) {
+                std::size_t k = std::distance(&second_indexes[col_begin], it) + col_begin;
+                return values[k];
+            }
+        }
+        // Throw an exception if element not found
+        throw std::out_of_range("Element not found");
+    } else {
+        // Uncompressed mode
+        return data[{i, j}];
     }
 }
 #endif  // SPARSEMATRIX_HPP
