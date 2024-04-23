@@ -351,39 +351,38 @@ T algebra::SparseMatrix<T,Order>::operator()(std::size_t i, std::size_t j) const
     }
 }
 
-
+// NOTICE: you cannot add a element in compressed state!!
 template<typename T, StorageOrder Order>
 T& algebra::SparseMatrix<T,Order>::operator()(std::size_t i, std::size_t j) {
     if (i >= get_rows() || j >= get_cols())
         throw std::out_of_range("Index out of range");
-
-    if (compressed) {
+    if (compressed){
         // Compressed mode
         if constexpr(Order == StorageOrder::RowMajor) {
-            auto row_begin = first_indexes[i];
-            auto row_end = first_indexes[i + 1];
-            auto it = std::find_if(&second_indexes[row_begin], &second_indexes[row_end], [j](std::size_t k) {
-                return k == j;
-            });
-            if (it != &second_indexes[row_end]) {
-                std::size_t k = std::distance(&second_indexes[row_begin], it) + row_begin;
-                return values[k];
-            }
+            if(first_indexes[i]==first_indexes[i+1])
+                std::cerr<<"Cannot add elements if the matrix is compressed"<<std::endl; 
+            // Search for the element in the compressed row-major format
+            for (std::size_t k = first_indexes[i]; k < first_indexes[i + 1]; ++k) {
+                if (second_indexes[k] == j) {
+                    return values[k]; // Element found, return its value
+                    }
+                }
         } else {
-            auto col_begin = first_indexes[j];
-            auto col_end = first_indexes[j + 1];
-            auto it = std::find_if(&second_indexes[col_begin], &second_indexes[col_end], [i](std::size_t k) {
-                return k == i;
-            });
-            if (it != &second_indexes[col_end]) {
-                std::size_t k = std::distance(&second_indexes[col_begin], it) + col_begin;
-                return values[k];
+            if(first_indexes[j]==first_indexes[j+1])
+                return values[values.size()]; 
+            // Search for the element in the compressed column-major format
+            for (std::size_t k = first_indexes[j]; k < first_indexes[j + 1]; ++k) {
+                if (second_indexes[k] == i) {
+                    return values[k]; // Element found, return its value
+                }
             }
-        }
-        // Throw an exception if element not found
-        throw std::out_of_range("Element not found");
-    } else {
+    }
+    // Throw an exception if element not found
+    throw std::out_of_range("Element not found");
+    }else{
         // Uncompressed mode
+        if(data.find({i, j})==data.end())
+            return data[{i,j}] = 0;
         return data[{i, j}];
     }
 }
