@@ -32,7 +32,6 @@ There are two kind of storage technique you can use:
 Regarding the call operator we can make some observations:
 - you cannot add a element in compressed state but only change the state of an existing non zero element
 ## Things to do:
-- compress and uncompress method
 - Matrix-vector multiplication
 - Header-only implementation for easy integration into existing projects
 - Everyone should be able to run the Makefile!
