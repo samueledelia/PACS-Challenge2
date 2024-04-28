@@ -29,8 +29,23 @@ There are two kind of storage technique you can use:
     - `first_indexes`: of length the number of rows ( or column in case of CSC) plus one, contains the starting index for the elements of each row ( column).
     - `second_indexes`: of length the number of nonzeroes, contains the corresponding column (rows) index.
     - `values`: is the vector of values, again of length the number of non-zeroes.
-Regarding the call operator we can make some observations:
-- you cannot add a element in compressed state but only change the state of an existing non zero element
+
+Within the public methods, the following are available:
+
+- Default constructor
+- Constructors that accept parameters for the number of rows, columns, and compression boolean
+- Constructor that accepts the filename of a Matrix Market format file
+- `read_mtx` method: Similar to the previous constructor, it overwrites the matrix on the next line and retains the capability to read a Matrix Market file and overwrite a stored matrix.
+- `print` method: Print matrix in Matrix Market format
+- `resize` method: takes two size_t inputs as new wanted dimension of the matrix and tries to change not only the dimension of the matrix, but also the locations accordingly.
+- `compress` method:
+- `uncompress` method:
+-  `is_compressed` method:
+- Const call operator:
+- Non-Const call operator: you cannot add a element in compressed state but only change the state of an existing non zero element
+- `get_row` method
+- `get_cols` method
+
 ## Things to do:
 - Matrix-vector multiplication
 - Header-only implementation for easy integration into existing projects
