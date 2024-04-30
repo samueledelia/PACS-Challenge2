@@ -66,8 +66,3 @@ std::vector<T> result = sparse_matrix * vector;
 
 - `sparse_matrix`: The sparse matrix object of type algebra::Sparse_Matrix<T, Order> to be multiplied.
 - `vector`: The vector object of type std::vector<T> to be multiplied.
-
-## Things to do:
-- cpp for SparseMatric.hpp
-- Everyone should be able to run the Makefile!
-- Try to learn to use Doxygen to comment on your function/classes/methods.

@@ -1,7 +1,6 @@
 #include "SparseMatrix.hpp"
 #include "chrono.hpp"
 
-
 int main()
 {   
     // TEST 1: Create Sparse Matrix using uncompressed storage technique

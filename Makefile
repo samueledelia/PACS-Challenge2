@@ -1,6 +1,6 @@
 # compiling variables
 CXXFLAGS = -std=c++20 -O2 -fPIC
-CPPFLAGS = -Iinclude -DNDEBUG
+CPPFLAGS = -Iinclude -Idata -DNDEBUG
 LDFLAGS = -L. -Wl,-rpath=${PWD}
 LDLIBS = 
 
