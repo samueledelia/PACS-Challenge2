@@ -104,14 +104,41 @@ namespace algebra // Algebra namespace
         }
 
         
- //       // Friend operator for matrix-vector multiplication
- //       friend std::vector<T> operator*(const SparseMatrix<T, Order>& mat, const std::vector<T>& vec) {
- //           std::vector<T> result;
- //           // Implementation of matrix-vector multiplication TO BE DONE
- //           //return result;
- //           return 0;   //Placeholder
- //       }
-    
+// * friend operator between a Matrix and a vector
+friend std::vector<T> operator*(const SparseMatrix<T, Order>& M, const std::vector<T>& vec) {
+    const std::size_t numRows = M.num_rows;
+    const std::size_t numCols = M.num_cols;
+
+    std::vector<T> result((Order == StorageOrder::RowMajor) ? numRows : numCols, 0);
+
+    if constexpr (Order == StorageOrder::RowMajor) {
+        if (M.compressed) {
+            for (std::size_t i = 0; i < numRows; ++i) {
+                for (std::size_t j = M.first_indexes[i]; j < M.first_indexes[i + 1]; ++j) {
+                    result[i] += M.values[j] * vec[M.second_indexes[j]];
+                }
+            }
+        } else {
+            for (const auto& entry : M.data) {
+                result[entry.first[0]] += entry.second * vec[entry.first[1]];
+            }
+        }
+    } else {
+        if (M.compressed) {
+            for (std::size_t i = 0; i < numCols; ++i) {
+                for (std::size_t j = M.first_indexes[i]; j < M.first_indexes[i + 1]; ++j) {
+                    result[M.second_indexes[j]] += M.values[j] * vec[i];
+                }
+            }
+        } else {
+            for (const auto& entry : M.data) {
+                result[entry.first[1]] += entry.second * vec[entry.first[0]];
+            }
+        }
+    }
+
+    return result;
+};
     };
 
 }   // namespace algebra

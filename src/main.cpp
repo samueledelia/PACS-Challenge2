@@ -1,5 +1,5 @@
 #include "SparseMatrix.hpp"
-
+#include "chrono.hpp"
 
 
 int main()
@@ -28,15 +28,28 @@ int main()
     std::cout << "Uncompressed matrix:" << std::endl;
     mat.print();
     
- /*   // TEST 2: Implementation of the Matrix reader format
+    // TEST 2: Implementation of the Matrix reader format for a simple sparse matrix
     std::string filename_matrix="Simple_Matrix.mtx";
-    algebra::SparseMatrix<double,StorageOrder::ColumnMajor> mat2(filename_matrix, false);
-    mat2.print();
+    algebra::SparseMatrix<double,StorageOrder::ColumnMajor> mat1(filename_matrix, false);
+    mat1.print();
 
     //TEST 3: Matrix-vector multiplication
     std::string filename="Insp_131.mtx";
-    algebra::SparseMatrix<double,StorageOrder::ColumnMajor> mat2(filename);
-  */  
+    algebra::SparseMatrix<double,StorageOrder::ColumnMajor> mat2(filename, false);
+    std::vector<double> vec(131);
+    Timings::Chrono chronometer;
+    chronometer.start();
+    std::vector<double> result=mat2*vec;
+    chronometer.stop();
+    double time=chronometer.wallTime();
+    std::cout<<"Time for uncompressed: "<<time<<" msec"<<std::endl;
 
+    mat2.compress();
+
+    chronometer.start();
+    std::vector<double> result1=mat2*vec;
+    chronometer.stop();
+    double time1=chronometer.wallTime();
+    std::cout<<"Time for compressed: "<<time1<<" msec "<<std::endl;
     return 0;
 }
